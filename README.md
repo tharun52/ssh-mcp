@@ -64,5 +64,5 @@ http://localhost:8000/health
 
 ## Deployment
 
-- `local-deploy.md` — Docker and local Python setup
-- `agentcore-deploy.md` — AWS AgentCore Runtime deployment with VPC, S3 Files, and Gateway
+- [local-deploy.md](./local-deploy.md) — Docker and local Python setup
+- [agentcore-deploy.md](./agentcore-deploy.md) — AWS AgentCore Runtime deployment with VPC, S3 Files, and Gateway

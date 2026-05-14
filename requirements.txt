@@ -1,0 +1,4 @@
+fastmcp
+paramiko
+uvicorn[standard]
+boto3

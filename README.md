@@ -1,6 +1,6 @@
 # SSH MCP Server
 
-An MCP (Model Context Protocol) server that exposes SSH operations as tools, letting AI agents run commands, execute scripts, and transfer files on a remote VM over SSH.
+An MCP (Model Context Protocol) server that exposes SSH operations as tools, letting AI agents run commands, execute scripts, transfer files, and manage long-running background jobs on a remote VM over SSH.
 
 Connects to any SSH-accessible machine. Supports key-based auth, password auth, AWS Secrets Manager, and S3-hosted keys.
 
@@ -8,26 +8,35 @@ Connects to any SSH-accessible machine. Supports key-based auth, password auth, 
 
 ### Shell
 
-| Tool | Description |
-|---|---|
-| `ssh_run_command` | Run a shell command on the remote VM. Returns `stdout`, `stderr`, `exit_code`. |
-| `ssh_run_command_with_timeout` | Same as above with a custom timeout (seconds). |
-| `ssh_run_script` | Write a script to the remote VM and execute it in one call. Supports any interpreter (`bash`, `python3`, `sh`, etc.), optional `sudo`, and configurable `working_dir`. |
+| Tool | Arguments | Description |
+|---|---|---|
+| `ssh_run_command` | `command`, `sudo=false` | Run a shell command on the remote VM. Returns `stdout`, `stderr`, `exit_code`. |
+| `ssh_run_command_with_timeout` | `command`, `timeout`, `sudo=false` | Same as above with a custom timeout (seconds). |
+| `ssh_run_script` | `content`, `interpreter=bash`, `timeout=30`, `sudo=false`, `working_dir=/tmp` | Write a script to the remote VM via SFTP and execute it. Supports any interpreter (`bash`, `python3`, `sh`, etc.). |
+
+### Background Jobs
+
+| Tool | Arguments | Description |
+|---|---|---|
+| `ssh_run_background` | `command`, `sudo=false` | Run a command in the background using `nohup`. Returns `job_id` and `pid`. |
+| `ssh_check_job` | `job_id` | Check status of a background job. Returns `status` (running/done/failed), `output`, `exit_code`, and `process_info` (PID, CPU%, MEM%, elapsed time). |
+
+Background jobs write output to `/tmp/_mcp_job_<id>.*` on the remote VM and survive SSH reconnects. Use `job_id` (not `pid`) with `ssh_check_job`.
 
 ### File Transfer (SCP)
 
-| Tool | Description |
-|---|---|
-| `ssh_scp_upload` | Push a file from the local workspace (`FILE_PATH`) to an absolute path on the remote VM. |
-| `ssh_scp_download` | Pull a file from an absolute path on the remote VM into the local workspace (`FILE_PATH`). |
+| Tool | Arguments | Description |
+|---|---|---|
+| `ssh_scp_upload` | `local_filename`, `remote_path` | Push a file from the local workspace (`FILE_PATH`) to an absolute path on the remote VM. |
+| `ssh_scp_download` | `remote_path`, `local_filename` | Pull a file from an absolute path on the remote VM into the local workspace (`FILE_PATH`). |
 
 ### Workspace (local `FILE_PATH`)
 
-| Tool | Description |
-|---|---|
-| `workspace_list` | List all files in the local workspace. |
-| `workspace_read` | Read a file from the local workspace by filename. |
-| `workspace_write` | Write or overwrite a file in the local workspace. |
+| Tool | Arguments | Description |
+|---|---|---|
+| `workspace_list` | — | List all files in the local workspace. |
+| `workspace_read` | `filename` | Read a file from the local workspace. Restricted to `FILE_PATH` — path traversal is rejected. |
+| `workspace_write` | `filename`, `content` | Write or overwrite a file in the local workspace. Restricted to `FILE_PATH` — path traversal is rejected. |
 
 The workspace is the staging area for SCP transfers. In Docker, mount a host directory to it. In AgentCore, attach an S3 Files or EFS access point.
 

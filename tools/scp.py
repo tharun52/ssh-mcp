@@ -15,7 +15,9 @@ def register(mcp):
     @mcp.tool(name="ssh_scp_upload")
     def scp_upload(local_filename: str, remote_path: str) -> dict:
         """Upload a file from the container's FILE_PATH directory to an absolute path on the remote VM. local_filename is resolved relative to FILE_PATH (default: /transfers). Returns a dict with keys: success (bool), size (int bytes) on success, or error (str) on failure."""
-        local_path = FILE_PATH / local_filename
+        local_path = (FILE_PATH / local_filename).resolve()
+        if not local_path.is_relative_to(FILE_PATH.resolve()):
+            return {"error": "Path escapes workspace directory"}
         if not local_path.exists():
             return {"error": f"File not found in FILE_PATH: {local_path}"}
         client, sftp = None, None
@@ -66,7 +68,9 @@ def register(mcp):
     @mcp.tool(name="workspace_read")
     def workspace_read(filename: str) -> dict:
         """Read a file from the local workspace (FILE_PATH). Returns a dict with key: content (str) on success, or error (str) on failure."""
-        local_path = FILE_PATH / filename
+        local_path = (FILE_PATH / filename).resolve()
+        if not local_path.is_relative_to(FILE_PATH.resolve()):
+            return {"error": "Path escapes workspace directory"}
         try:
             return {"content": local_path.read_text()}
         except Exception as exc:
@@ -75,7 +79,9 @@ def register(mcp):
     @mcp.tool(name="workspace_write")
     def workspace_write(filename: str, content: str) -> dict:
         """Write content to a file in the local workspace (FILE_PATH), creating or overwriting it. Returns a dict with key: success (bool), size (int bytes) on success, or error (str) on failure."""
-        local_path = FILE_PATH / filename
+        local_path = (FILE_PATH / filename).resolve()
+        if not local_path.is_relative_to(FILE_PATH.resolve()):
+            return {"error": "Path escapes workspace directory"}
         try:
             local_path.write_text(content)
             return {"success": True, "size": local_path.stat().st_size}

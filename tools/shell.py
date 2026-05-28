@@ -5,7 +5,7 @@ Shell tools — run commands and scripts on the remote VM.
 import logging
 import uuid
 
-from connection import run
+from connection import pool, run
 
 log = logging.getLogger("ssh-mcp")
 
@@ -34,14 +34,24 @@ def register(mcp):
     def run_script(content: str, interpreter: str = "bash", timeout: int = 30, sudo: bool = False, working_dir: str = "/tmp") -> dict:
         """Upload a script to the remote VM and execute it in one call. interpreter can be bash, python3, sh, etc. (default: bash). timeout is max seconds to wait (default: 30). sudo runs as root (default: false). working_dir is where the script is written (default: /tmp). Returns a dict with keys: stdout (str), stderr (str), exit_code (int)."""
         remote_path = f"{working_dir}/_mcp_{uuid.uuid4().hex}.script"
-        escaped = content.replace("'", "'\\''")
         prefix = "sudo " if sudo else ""
         try:
-            result = run(f"cat > {remote_path} << 'EOF'\n{escaped}\nEOF")
-            if result["exit_code"] != 0:
-                return {"error": f"Failed to write script: {result['stderr']}", "stdout": "", "stderr": "", "exit_code": result["exit_code"]}
+            client, sftp = pool.get_sftp()
+        except Exception as exc:
+            log.exception("run_script failed: could not open SFTP channel")
+            return {"error": f"Failed to open SFTP channel — is SFTP enabled on the remote VM? ({exc})", "stdout": "", "stderr": "", "exit_code": -1}
+        try:
+            with sftp.open(remote_path, "w") as f:
+                f.write(content)
+        except Exception as exc:
+            log.exception("run_script failed: could not write script to remote")
+            return {"error": f"Failed to write script to {remote_path} on remote VM: {exc}", "stdout": "", "stderr": "", "exit_code": -1}
+        finally:
+            sftp.close()
+            pool.release()
+        try:
             return run(f"{prefix}{interpreter} {remote_path}; rm -f {remote_path}", timeout=timeout)
         except Exception as exc:
-            log.exception("run_script failed")
-            return {"error": str(exc), "stdout": "", "stderr": "", "exit_code": -1}
+            log.exception("run_script failed: could not execute script")
+            return {"error": f"Failed to execute script on remote VM: {exc}", "stdout": "", "stderr": "", "exit_code": -1}
 

@@ -22,7 +22,7 @@ from starlette.responses import JSONResponse
 
 from config import HOST_IP, SSH_PORT, USERNAME, FILE_PATH, IDLE_TIMEOUT, PORT
 from connection import pool
-from tools import shell, scp
+from tools import shell, scp, jobs
 
 log = logging.getLogger("ssh-mcp")
 
@@ -32,6 +32,7 @@ log = logging.getLogger("ssh-mcp")
 mcp = FastMCP("ssh-mcp")
 shell.register(mcp)
 scp.register(mcp)
+jobs.register(mcp)
 
 
 # ---------------------------------------------------------------------------

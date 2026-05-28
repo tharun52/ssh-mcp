@@ -1,4 +1,4 @@
 fastmcp
 paramiko
-uvicorn[standard]
+uvicorn
 boto3

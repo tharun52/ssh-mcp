@@ -1,13 +1,18 @@
-FROM python:3.12-slim
+FROM python:3.12-alpine AS builder
+
+RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
 
 WORKDIR /app
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    find /usr/local/lib/python3.12 -name "*.pyc" -delete && \
-    find /usr/local/lib/python3.12 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-COPY . .
+FROM python:3.12-alpine
+
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY aws/ aws/
+COPY tools/ tools/
+COPY config.py connection.py server.py ./
 
 RUN mkdir -p /transfers
 

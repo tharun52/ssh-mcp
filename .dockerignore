@@ -1,0 +1,7 @@
+*.pem
+*.md
+graphify-out/
+.git/
+__pycache__/
+*.pyc
+.env*
